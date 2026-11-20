@@ -1,0 +1,153 @@
+{
+  "document_title": "Word by Word Booklet Spreads (8.5x11)",
+  "font_sizes_pt": {
+    "arabic": 16.6,
+    "english": 8.3,
+    "urdu": 10
+  },
+  "chapter_content_gap_pt": 28,
+  "ayah_marker_font_size_pt": 26,
+  "pages": [
+    {
+      "type": "cover",
+      "title_ar": "الصلاة والمعوّذات",
+      "title_en": "Salah &\nThe Three Quls",
+      "subtitle": "Word-by-Word Guide",
+      "languages": "Arabic · English · Urdu"
+    },
+    {
+      "type": "content",
+      "sections": [
+        {
+          "source": "sana.json",
+          "title_en": "Al-Thana (Opening)",
+          "title_ar": "دعاء الاستفتاح"
+        }
+      ]
+    },
+    {
+      "type": "content",
+      "sections": [
+        {
+          "source": "fatiha.json",
+          "title_en": "Surah Al-Fatihah",
+          "title_ar": "سورة الفاتحة",
+          "end_at": {
+            "ayah": 4
+          },
+          "start_ayah_num": 1
+        }
+      ]
+    },
+    {
+      "type": "content",
+      "sections": [
+        {
+          "source": "fatiha.json",
+          "title_en": "Surah Al-Fatihah (Cont.)",
+          "title_ar": "سورة الفاتحة (تابع)",
+          "start_after": {
+            "ayah": 4
+          },
+          "start_ayah_num": 5
+        }
+      ]
+    },
+    {
+      "type": "content",
+      "sections": [
+        {
+          "source": "movements.json",
+          "title_en": "Ruku & Sujood",
+          "title_ar": "أذكار الركوع والسجود"
+        }
+      ]
+    },
+    {
+      "type": "content",
+      "sections": [
+        {
+          "source": "tashahhud.json",
+          "title_en": "At-Tashahhud",
+          "title_ar": "التشهد",
+          "end_before": {
+            "word": "وَأَشْهَدُ"
+          }
+        }
+      ]
+    },
+    {
+      "type": "content",
+      "sections": [
+        {
+          "source": "tashahhud.json",
+          "title_en": "At-Tashahhud (Cont.)",
+          "title_ar": "التشهد (تابع)",
+          "start_at": {
+            "word": "وَأَشْهَدُ"
+          }
+        },
+        {
+          "source": "durood.json",
+          "title_en": "Durood Ibrahim",
+          "title_ar": "الصلاة الإبراهيمية",
+          "end_before": {
+            "word": "إِنَّكَ",
+            "occurrence": 1
+          },
+          "compact_header": true
+        }
+      ]
+    },
+    {
+      "type": "content",
+      "sections": [
+        {
+          "source": "durood.json",
+          "title_en": "Durood Ibrahim (Cont.)",
+          "title_ar": "الصلاة الإبراهيمية (تابع)",
+          "start_at": {
+            "word": "إِنَّكَ",
+            "occurrence": 1
+          }
+        }
+      ]
+    },
+    {
+      "type": "content",
+      "sections": [
+        {
+          "source": "nas.json",
+          "title_en": "Surah An-Nas",
+          "title_ar": "سورة الناس"
+        }
+      ]
+    },
+    {
+      "type": "content",
+      "sections": [
+        {
+          "source": "falaq.json",
+          "title_en": "Surah Al-Falaq",
+          "title_ar": "سورة الفلق"
+        }
+      ]
+    },
+    {
+      "type": "content",
+      "sections": [
+        {
+          "source": "iklas.json",
+          "title_en": "Surah Al-Ikhlas",
+          "title_ar": "سورة الإخلاص"
+        }
+      ]
+    },
+    {
+      "type": "contact",
+      "name": "Your Name",
+      "phone": "000-000-0000",
+      "email": "email@example.com"
+    }
+  ]
+}
