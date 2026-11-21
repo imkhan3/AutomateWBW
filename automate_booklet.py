@@ -12,6 +12,13 @@ OUTPUT_FILE = BASE_DIR / "booklet.html"
 DEFAULT_FONT_SIZES_PT = {"arabic": 15, "english": 7.5, "urdu": 9}
 DEFAULT_CHAPTER_CONTENT_GAP_PT = 20
 DEFAULT_AYAH_MARKER_FONT_SIZE_PT = 28
+DEFAULT_LANGUAGES = ("en", "ur")
+LANGUAGE_CLASSES = {
+    "en": "english",
+    "ur": "urdu",
+    "tr": "turkish",
+    "yo": "yoruba",
+}
 
 STYLES = """
 @page {
@@ -211,7 +218,9 @@ body {
     margin-bottom: 5pt;
 }
 
-.english {
+.english,
+.turkish,
+.yoruba {
     font-size: var(--english-font-size);
     color: #334155;
     direction: ltr;
@@ -336,6 +345,22 @@ def _text(value: object, field_name: str) -> str:
     if not isinstance(value, str):
         raise ValueError(f"'{field_name}' must be a string.")
     return escape(value)
+
+
+def _template_languages(template: dict) -> tuple[str, ...]:
+    languages = template.get("languages", list(DEFAULT_LANGUAGES))
+    if not isinstance(languages, list):
+        raise ValueError("'languages' must be an array of language codes.")
+    if any(not isinstance(language, str) for language in languages):
+        raise ValueError("Each language must be a language code string.")
+    if len(set(languages)) != len(languages):
+        raise ValueError("'languages' cannot contain duplicate language codes.")
+    unsupported_languages = set(languages) - set(LANGUAGE_CLASSES)
+    if unsupported_languages:
+        raise ValueError(
+            f"Unsupported languages: {', '.join(sorted(unsupported_languages))}."
+        )
+    return tuple(languages)
 
 
 def _font_sizes_pt(template: dict) -> dict[str, int | float]:
@@ -486,7 +511,11 @@ def _load_source(source_name: str, cache: dict[str, list[dict]]) -> list[dict]:
     return cache[source_name]
 
 
-def _render_content(words: list[dict], start_ayah_num: int = 1) -> str:
+def _render_content(
+    words: list[dict],
+    start_ayah_num: int = 1,
+    languages: tuple[str, ...] = DEFAULT_LANGUAGES,
+) -> str:
     lines_html = []
     current_line = []
     ayah_count = start_ayah_num - 1
@@ -510,11 +539,16 @@ def _render_content(words: list[dict], start_ayah_num: int = 1) -> str:
             index += 1
             continue
 
+        translation_html = "\n".join(
+            f'<div class="{LANGUAGE_CLASSES[language]}">'
+            f"{escape(str(item.get(language, '')))}</div>"
+            for language in languages
+            if item.get(language) not in (None, "")
+        )
         word_card = f"""
         <div class="word-card">
             <div class="arabic">{escape(str(item.get('ar', '')))}</div>
-            <div class="english">{escape(str(item.get('en', '')))}</div>
-            <div class="urdu">{escape(str(item.get('ur', '')))}</div>
+            {translation_html}
         </div>
         """
 
@@ -547,7 +581,11 @@ def _render_content(words: list[dict], start_ayah_num: int = 1) -> str:
     )
 
 
-def _render_content_page(page: dict, cache: dict[str, list[dict]]) -> str:
+def _render_content_page(
+    page: dict,
+    cache: dict[str, list[dict]],
+    languages: tuple[str, ...] = DEFAULT_LANGUAGES,
+) -> str:
     sections = page.get("sections")
     if not isinstance(sections, list) or not sections:
         raise ValueError("Content pages must contain a non-empty sections array.")
@@ -587,7 +625,7 @@ def _render_content_page(page: dict, cache: dict[str, list[dict]]) -> str:
                 <h3 class="title-en">{title_en}</h3>
             </header>
             <div class="chapter-content">
-                {_render_content(selected_words, start_ayah_num)}
+                {_render_content(selected_words, start_ayah_num, languages)}
             </div>
         </div>
         """)
@@ -595,10 +633,14 @@ def _render_content_page(page: dict, cache: dict[str, list[dict]]) -> str:
     return '<div class="half-page">\n' + "\n".join(rendered_sections) + "\n</div>"
 
 
-def _render_page(page: dict, cache: dict[str, list[dict]]) -> str:
+def _render_page(
+    page: dict,
+    cache: dict[str, list[dict]],
+    languages: tuple[str, ...] = DEFAULT_LANGUAGES,
+) -> str:
     page_type = page.get("type", "content")
     if page_type == "content":
-        return _render_content_page(page, cache)
+        return _render_content_page(page, cache, languages)
     if page_type == "blank":
         return '<div class="half-page"></div>'
     if page_type == "cover":
@@ -748,11 +790,12 @@ def generate_booklet(template_path: Path, layout: str = "imposed") -> Path:
         raise ValueError("The template must contain a non-empty pages array.")
 
     source_cache: dict[str, list[dict]] = {}
+    languages = _template_languages(template)
     pages = []
     for page_spec in page_specs:
         if not isinstance(page_spec, dict):
             raise ValueError("Each page definition must be a JSON object.")
-        pages.append(_render_page(page_spec, source_cache))
+        pages.append(_render_page(page_spec, source_cache, languages))
 
     title = _text(
         template.get("document_title", "Word by Word Booklet Spreads (8.5x11)"),

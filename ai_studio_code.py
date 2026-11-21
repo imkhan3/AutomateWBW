@@ -6,6 +6,12 @@ from html_generator import generate_html
 
 BASE_DIR = Path(__file__).resolve().parent
 JSON_DIR = BASE_DIR / "jsons"
+WEB_LANGUAGE_OPTIONS = (
+    ("en", "English"),
+    ("ur", "Urdu"),
+    ("tr", "Turkish"),
+    ("yo", "Yoruba"),
+)
 
 
 def prepare_json_directory() -> None:
@@ -56,7 +62,12 @@ def main() -> None:
     with selected_file.open("r", encoding="utf-8") as file:
         words = json.load(file)
 
-    generate_html(words, selected_file.name, BASE_DIR / "output.html")
+    generate_html(
+        words,
+        selected_file.name,
+        BASE_DIR / "output.html",
+        WEB_LANGUAGE_OPTIONS,
+    )
 
 
 if __name__ == "__main__":

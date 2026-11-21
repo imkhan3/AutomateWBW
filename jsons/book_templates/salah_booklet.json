@@ -5,6 +5,7 @@
     "english": 8.3,
     "urdu": 10
   },
+  "languages": ["en", "ur"],
   "chapter_content_gap_pt": 28,
   "ayah_marker_font_size_pt": 26,
   "pages": [

@@ -1,10 +1,37 @@
+from html import escape
 import webbrowser
 from pathlib import Path
 
+DEFAULT_LANGUAGE_OPTIONS = (
+    ("en", "English"),
+    ("ur", "Urdu"),
+    ("tr", "Turkish"),
+    ("yo", "Yoruba"),
+)
+LANGUAGE_CLASSES = {
+    "en": "english",
+    "ur": "urdu",
+    "tr": "turkish",
+    "yo": "yoruba",
+}
+DEFAULT_SELECTED_LANGUAGES = {"en", "ur"}
+
 
 def generate_html(
-    words: list[dict[str, str | int | bool]], source_name: str, output_file: Path
+    words: list[dict[str, str | int | bool]],
+    source_name: str,
+    output_file: Path,
+    language_options: tuple[tuple[str, str], ...] = DEFAULT_LANGUAGE_OPTIONS,
 ) -> None:
+    language_codes = [code for code, _ in language_options]
+    if len(set(language_codes)) != len(language_codes):
+        raise ValueError("Language options cannot contain duplicate codes.")
+    unsupported_languages = set(language_codes) - set(LANGUAGE_CLASSES)
+    if unsupported_languages:
+        raise ValueError(
+            f"Unsupported languages: {', '.join(sorted(unsupported_languages))}."
+        )
+
     lines_html = []
     current_line = []
     ayah_count = 0
@@ -17,14 +44,28 @@ def generate_html(
                 current_line = []
             index += 1
             continue
+        if "ayah_spacer" in item:
+            index += 1
+            continue
         if "ayah" in item:
             raise ValueError("An ayah marker must follow a word.")
 
+        translation_html = []
+        for language, _ in language_options:
+            value = item.get(language, "")
+            if value is None or value == "":
+                continue
+            hidden = "" if language in DEFAULT_SELECTED_LANGUAGES else " hidden"
+            translation_html.append(
+                f'<div class="translation {LANGUAGE_CLASSES[language]}" '
+                f'data-language="{language}"{hidden}>'
+                f"{escape(str(value))}</div>"
+            )
+
         word_card = f"""
     <div class="word-card">
-        <div class="arabic">{item.get('ar', '')}</div>
-        <div class="english">{item.get('en', '')}</div>
-        <div class="urdu">{item.get('ur', '')}</div>
+        <div class="arabic">{escape(str(item.get('ar', '')))}</div>
+        {"".join(translation_html)}
     </div>
     """
         next_index = index + 1
@@ -55,6 +96,13 @@ def generate_html(
 
     cards_html = "\n".join(
         f'<div class="hadith-line">\n{line}\n</div>' for line in lines_html
+    )
+    language_controls = "\n".join(
+        f'<label><input class="language-toggle" type="checkbox" '
+        f'value="{escape(code, quote=True)}"'
+        f'{" checked" if code in DEFAULT_SELECTED_LANGUAGES else ""}>'
+        f" {escape(label)}</label>"
+        for code, label in language_options
     )
 
     html_content = f"""<!DOCTYPE html>
@@ -114,6 +162,21 @@ def generate_html(
             min-width: 60px;
         }}
 
+        .language-controls {{
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin: 20px 0;
+        }}
+
+        .language-controls label {{
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+        }}
+
         .ayah-ending {{
             display: flex;
             align-items: center;
@@ -138,10 +201,10 @@ def generate_html(
             margin-bottom: 6px;
         }}
 
-        .english {{
+        .translation {{
             font-size: 19px;
             color: #444;
-            direction: ltr; /* English reads LTR */
+            direction: ltr;
             margin-bottom: 8px;
         }}
 
@@ -150,6 +213,7 @@ def generate_html(
             font-size: 26px;
             color: #111;
             line-height: 2.1; /* Nastaliq requires extra height */
+            direction: rtl;
         }}
 
         .download-btn {{
@@ -179,15 +243,31 @@ def generate_html(
                 padding: 0 24px;
                 margin: 0 auto;
             }}
-            .download-btn {{ display: none; }}
+            .download-btn, .language-controls {{ display: none; }}
         }}
     </style>
     <script>
+        document.addEventListener('DOMContentLoaded', () => {{
+            document.querySelectorAll('.language-toggle').forEach(checkbox => {{
+                checkbox.addEventListener('change', () => {{
+                    document.querySelectorAll(
+                        '.translation[data-language="' + checkbox.value + '"]'
+                    ).forEach(line => {{
+                        line.hidden = !checkbox.checked;
+                    }});
+                }});
+            }});
+        }});
+
         function printPdf() {{
             var el = document.querySelector('.page-sheet');
+            var controls = document.querySelector('.language-controls');
+            var originalDisplay = controls.style.display;
+            controls.style.display = 'none';
             var rect = el.getBoundingClientRect();
             var width = rect.width + 48;
             var height = rect.height + 24;
+            controls.style.display = originalDisplay;
 
             var style = document.createElement('style');
             style.textContent = '@page {{ size: ' + width + 'px ' + height + 'px; margin: 0 24px; }}';
@@ -201,7 +281,9 @@ def generate_html(
 
         async function downloadPng() {{
             const sheet = document.querySelector('.page-sheet');
-            const buttons = sheet.querySelectorAll('.download-btn');
+            const buttons = sheet.querySelectorAll(
+                '.download-btn, .language-controls'
+            );
             const originalDisplays = Array.from(buttons, button => button.style.display);
             await document.fonts.ready;
             buttons.forEach(button => {{ button.style.display = 'none'; }});
@@ -223,6 +305,9 @@ def generate_html(
 <body>
 
 <div class="page-sheet">
+    <div class="language-controls" aria-label="Translation languages">
+        {language_controls}
+    </div>
     <div class="hadith-container">
         {cards_html}
     </div>
