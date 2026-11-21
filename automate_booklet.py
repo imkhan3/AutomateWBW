@@ -296,6 +296,41 @@ body {
 }
 """
 
+STANDARD_PAGE_STYLES = """
+@page {
+    size: 8.5in 11in;
+    margin: 0;
+}
+
+.booklet-container {
+    width: 8.5in;
+}
+
+.half-page {
+    width: 8.5in;
+    height: 11in;
+    margin: 0 auto 24px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+}
+
+.half-page:not(:last-child) {
+    page-break-after: always;
+    break-after: page;
+}
+
+@media print {
+    .booklet-container {
+        margin: 0;
+        width: 8.5in;
+    }
+
+    .half-page {
+        margin: 0;
+        box-shadow: none;
+    }
+}
+"""
+
 
 def _text(value: object, field_name: str) -> str:
     if not isinstance(value, str):
@@ -681,7 +716,29 @@ def select_template() -> Path:
     return _resolve_template_path(choice)
 
 
-def generate_booklet(template_path: Path) -> Path:
+def select_layout() -> str:
+    print("Select PDF layout:")
+    print("  1. Standard - letter (8.5 x 11), one page per sheet, template order")
+    print(
+        "  2. Imposed booklet - two pages per side, print order for folding; "
+        "pads to a multiple of 4"
+    )
+    try:
+        choice = input("Choose 1 or 2 [default: 2]: ").strip().lower()
+    except EOFError:
+        choice = ""
+
+    if choice in {"", "2", "imposed"}:
+        return "imposed"
+    if choice in {"1", "standard"}:
+        return "standard"
+    raise ValueError("Select 1 for standard or 2 for imposed booklet layout.")
+
+
+def generate_booklet(template_path: Path, layout: str = "imposed") -> Path:
+    if layout not in {"standard", "imposed"}:
+        raise ValueError("Layout must be either 'standard' or 'imposed'.")
+
     with template_path.open("r", encoding="utf-8") as file:
         template = json.load(file)
     if not isinstance(template, dict):
@@ -712,19 +769,24 @@ def generate_booklet(template_path: Path) -> Path:
         f"; --ayah-marker-font-size: "
         f"{_ayah_marker_font_size_pt(template):g}pt"
     )
-    sheets_html = _impose_pages(pages)
+    if layout == "imposed":
+        page_layout_html = _impose_pages(pages)
+        layout_styles = STYLES
+    else:
+        page_layout_html = "\n".join(pages)
+        layout_styles = STYLES + STANDARD_PAGE_STYLES
     html_content = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>{title}</title>
     <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Noto+Nastaliq+Urdu:wght@400;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <style>{STYLES}</style>
+    <style>{layout_styles}</style>
 </head>
 <body>
 <button class="print-btn" onclick="window.print()">Print / Save Booklet PDF</button>
 <div class="booklet-container" style="{style_variables}">
-{sheets_html}
+{page_layout_html}
 </div>
 </body>
 </html>
@@ -740,20 +802,26 @@ def generate_booklet(template_path: Path) -> Path:
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
-        description="Generate an imposed booklet from a JSON page template."
+        description="Generate a standard or imposed booklet from a JSON page template."
     )
     parser.add_argument(
         "template",
         nargs="?",
         help="Template JSON filename in jsons/book_templates or its path",
     )
+    parser.add_argument(
+        "--layout",
+        choices=("standard", "imposed"),
+        help="PDF page layout (skips the interactive layout prompt)",
+    )
     arguments = parser.parse_args(argv)
+    layout = arguments.layout or select_layout()
     template_path = (
         _resolve_template_path(arguments.template)
         if arguments.template
         else select_template()
     )
-    generate_booklet(template_path)
+    generate_booklet(template_path, layout)
 
 
 if __name__ == "__main__":
