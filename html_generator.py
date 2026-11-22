@@ -14,7 +14,7 @@ LANGUAGE_CLASSES = {
     "tr": "turkish",
     "yo": "yoruba",
 }
-DEFAULT_SELECTED_LANGUAGES = {"en", "ur"}
+DEFAULT_SELECTED_LANGUAGES = {"en"}
 
 
 def generate_html(
@@ -26,11 +26,6 @@ def generate_html(
     language_codes = [code for code, _ in language_options]
     if len(set(language_codes)) != len(language_codes):
         raise ValueError("Language options cannot contain duplicate codes.")
-    unsupported_languages = set(language_codes) - set(LANGUAGE_CLASSES)
-    if unsupported_languages:
-        raise ValueError(
-            f"Unsupported languages: {', '.join(sorted(unsupported_languages))}."
-        )
 
     lines_html = []
     current_line = []
@@ -56,8 +51,9 @@ def generate_html(
             if value is None or value == "":
                 continue
             hidden = "" if language in DEFAULT_SELECTED_LANGUAGES else " hidden"
+            language_class = LANGUAGE_CLASSES.get(language, f"language-{language}")
             translation_html.append(
-                f'<div class="translation {LANGUAGE_CLASSES[language]}" '
+                f'<div class="translation {language_class}" '
                 f'data-language="{language}"{hidden}>'
                 f"{escape(str(value))}</div>"
             )

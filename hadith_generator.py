@@ -3,7 +3,49 @@ import os
 from pathlib import Path
 
 
-def create_hadith_json(json_dir: Path) -> Path:
+def _select_languages(
+    language_options: tuple[tuple[str, str], ...],
+) -> tuple[tuple[str, str], ...]:
+    additional_options = tuple(
+        (code, name) for code, name in language_options if code != "en"
+    )
+    print("English is always included. Select any additional languages:")
+    for index, (_, name) in enumerate(additional_options, start=1):
+        print(f"  {index}. {name}")
+    print("  Press Enter for English only.")
+
+    try:
+        choice = input("Additional languages (comma-separated numbers): ").strip()
+    except EOFError:
+        choice = ""
+
+    if not choice:
+        return (("en", "English"),)
+
+    selected_indices = []
+    for value in choice.split(","):
+        value = value.strip()
+        if not value.isdigit():
+            raise ValueError("Enter language numbers separated by commas.")
+        selected_index = int(value) - 1
+        if not 0 <= selected_index < len(additional_options):
+            raise ValueError("Selected language number is out of range.")
+        if selected_index not in selected_indices:
+            selected_indices.append(selected_index)
+
+    selected = [("en", "English")]
+    selected.extend(additional_options[index] for index in selected_indices)
+    return tuple(selected)
+
+
+def create_hadith_json(
+    json_dir: Path,
+    language_options: tuple[tuple[str, str], ...],
+) -> Path:
+    selected_languages = _select_languages(language_options)
+    translation_codes = [code for code, _ in selected_languages]
+    translation_names = [name for _, name in selected_languages]
+
     print("Paste the Arabic text now, then enter a blank line when finished:")
     arabic_lines = []
     while True:
@@ -40,16 +82,24 @@ def create_hadith_json(json_dir: Path) -> Path:
         ) from exc
 
     client = genai.Client(api_key=api_key)
+    language_fields = "\n".join(
+        f'- "{code}": its context-aware {name} translation'
+        for code, name in selected_languages
+    )
+    properties = {"ar": {"type": "string"}}
+    properties.update({code: {"type": "string"} for code in translation_codes})
+    required_fields = ["ar", *translation_codes]
     prompt = f"""Translate this Arabic Hadith word by word.
 Return a JSON object with a "words" array. Include one object per Arabic word/token,
 in the same order. Each word object must have these string keys:
 - "ar": the Arabic word with accurate harakat/tashkeel
-- "en": its context-aware English translation
-- "ur": its context-aware Urdu translation
+{language_fields}
 Preserve the original text and meaning; keep attached particles with their words.
 Add an {{"ayah": true}} marker at the end of each Quranic ayah. Do not number it.
 Add an {{"line_break": true}} object for a standalone line break when needed.
 Do not include ayah objects for text without identifiable ayah boundaries.
+English is required. Translate into: {", ".join(translation_names)}.
+Do not include translations in any other language.
 
 Arabic text:
 {arabic_text}"""
@@ -69,12 +119,8 @@ Arabic text:
                             "anyOf": [
                                 {
                                     "type": "object",
-                                    "properties": {
-                                        "ar": {"type": "string"},
-                                        "en": {"type": "string"},
-                                        "ur": {"type": "string"},
-                                    },
-                                    "required": ["ar", "en", "ur"],
+                                    "properties": properties,
+                                    "required": required_fields,
                                 },
                                 {
                                     "type": "object",
@@ -135,14 +181,16 @@ Arabic text:
                 )
             words.append({"ayah": True})
             continue
+        word_fields = ["ar", *translation_codes]
         if any(
             key not in item or not isinstance(item[key], str) or not item[key].strip()
-            for key in ("ar", "en", "ur")
+            for key in word_fields
         ):
             raise ValueError(
-                f"Gemini result item {index} must contain non-empty ar, en, and ur strings."
+                f"Gemini result item {index} must contain non-empty "
+                f"{', '.join(word_fields)} strings."
             )
-        words.append({key: item[key].strip() for key in ("ar", "en", "ur")})
+        words.append({key: item[key].strip() for key in word_fields})
 
     with output_json.open("x", encoding="utf-8") as file:
         json.dump(words, file, ensure_ascii=False, indent=2)

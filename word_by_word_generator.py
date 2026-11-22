@@ -3,15 +3,10 @@ from pathlib import Path
 
 from hadith_generator import create_hadith_json
 from html_generator import generate_html
+from languages.language_catalog import load_language_options
 
 BASE_DIR = Path(__file__).resolve().parent
 JSON_DIR = BASE_DIR / "jsons"
-WEB_LANGUAGE_OPTIONS = (
-    ("en", "English"),
-    ("ur", "Urdu"),
-    ("tr", "Turkish"),
-    ("yo", "Yoruba"),
-)
 
 
 def prepare_json_directory() -> None:
@@ -22,7 +17,10 @@ def prepare_json_directory() -> None:
         legacy_data_file.replace(JSON_DIR / "falaq.json")
 
 
-def select_json_file(json_dir: Path) -> Path:
+def select_json_file(
+    json_dir: Path,
+    language_options: tuple[tuple[str, str], ...],
+) -> Path:
     json_files = sorted(json_dir.glob("*.json"))
 
     print("Available JSON files:")
@@ -38,7 +36,7 @@ def select_json_file(json_dir: Path) -> Path:
         choice = ""
 
     if choice == "0":
-        return create_hadith_json(json_dir)
+        return create_hadith_json(json_dir, language_options)
     if choice == "":
         return json_dir / "falaq.json"
     if choice.isdigit():
@@ -57,16 +55,28 @@ def select_json_file(json_dir: Path) -> Path:
 
 def main() -> None:
     prepare_json_directory()
-    selected_file = select_json_file(JSON_DIR)
+    language_options = load_language_options()
+    selected_file = select_json_file(JSON_DIR, language_options)
 
     with selected_file.open("r", encoding="utf-8") as file:
         words = json.load(file)
+
+    present_codes = {
+        language
+        for word in words
+        if isinstance(word, dict)
+        for language, _ in language_options
+        if language in word
+    }
+    web_language_options = tuple(
+        option for option in language_options if option[0] in present_codes
+    )
 
     generate_html(
         words,
         selected_file.name,
         BASE_DIR / "output.html",
-        WEB_LANGUAGE_OPTIONS,
+        web_language_options,
     )
 
 

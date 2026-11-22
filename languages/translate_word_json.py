@@ -4,10 +4,17 @@ import os
 import tempfile
 from pathlib import Path
 
+if __package__:
+    from .language_catalog import load_language_options
+else:
+    from language_catalog import load_language_options
+
 BASE_DIR = Path(__file__).resolve().parents[1]
 JSON_DIR = BASE_DIR / "jsons"
 MODEL = "gemini-3.1-flash-lite"
-LANGUAGES = {"tr": "Turkish", "yo": "Yoruba"}
+LANGUAGES = {
+    code: name for code, name in load_language_options() if code != "en"
+}
 
 
 def _resolve_source_file(argument: str) -> Path:
