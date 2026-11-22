@@ -7,8 +7,15 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
 JSON_DIR = BASE_DIR / "jsons"
-TEMPLATE_DIR = JSON_DIR / "book_templates"
+TEMPLATE_DIR = BASE_DIR / "book_templates"
 OUTPUT_FILE = BASE_DIR / "booklet.html"
+SHARED_WORD_STYLES = (BASE_DIR / "shared_word_styles.css").read_text(
+    encoding="utf-8"
+)
+PAGE_STYLES = {
+    "imposed": "@page { size: 11in 8.5in; margin: 0; }",
+    "standard": "@page { size: 8.5in 11in; margin: 0; }",
+}
 DEFAULT_FONT_SIZES_PT = {"arabic": 15, "english": 7.5, "urdu": 9}
 DEFAULT_CHAPTER_CONTENT_GAP_PT = 20
 DEFAULT_AYAH_MARKER_FONT_SIZE_PT = 28
@@ -21,11 +28,6 @@ LANGUAGE_CLASSES = {
 }
 
 STYLES = """
-@page {
-    size: 11in 8.5in;
-    margin: 0;
-}
-
 body {
     margin: 0;
     padding: 0;
@@ -108,7 +110,6 @@ body {
 }
 
 .cover-title-ar {
-    font-family: 'Amiri', serif;
     font-size: 24pt;
     line-height: 1.5;
     color: #0f172a;
@@ -153,7 +154,6 @@ body {
 }
 
 .title-ar {
-    font-family: 'Amiri', serif;
     font-size: 19pt;
     margin: 0;
     line-height: 1.35;
@@ -202,16 +202,11 @@ body {
 }
 
 .word-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
     min-width: 30pt;
     break-inside: avoid;
 }
 
 .arabic {
-    font-family: 'Amiri', serif;
     font-size: var(--arabic-font-size);
     color: #000;
     line-height: 1.3;
@@ -229,7 +224,6 @@ body {
 }
 
 .urdu {
-    font-family: 'Noto Nastaliq Urdu', serif;
     font-size: var(--urdu-font-size);
     color: #000;
     line-height: 1.8;
@@ -237,10 +231,8 @@ body {
 
 .ayah-ending {
     position: relative;
-    display: flex;
     align-items: center;
     margin-left: 4pt;
-    direction: rtl;
     break-inside: avoid;
 }
 
@@ -292,9 +284,6 @@ body {
     }
 
     .sheet {
-        box-sizing: border-box;
-        width: 11in;
-        height: 8.5in;
         margin: 0;
         box-shadow: none;
     }
@@ -306,11 +295,6 @@ body {
 """
 
 STANDARD_PAGE_STYLES = """
-@page {
-    size: 8.5in 11in;
-    margin: 0;
-}
-
 .booklet-container {
     width: 8.5in;
 }
@@ -818,6 +802,9 @@ def generate_booklet(template_path: Path, layout: str = "imposed") -> Path:
     else:
         page_layout_html = "\n".join(pages)
         layout_styles = STYLES + STANDARD_PAGE_STYLES
+    layout_styles = (
+        f"{SHARED_WORD_STYLES}\n{PAGE_STYLES[layout]}\n{layout_styles}"
+    )
     html_content = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -850,7 +837,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument(
         "template",
         nargs="?",
-        help="Template JSON filename in jsons/book_templates or its path",
+        help="Template JSON filename in book_templates or its path",
     )
     parser.add_argument(
         "--layout",

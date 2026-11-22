@@ -15,6 +15,9 @@ LANGUAGE_CLASSES = {
     "yo": "yoruba",
 }
 DEFAULT_SELECTED_LANGUAGES = {"en"}
+SHARED_WORD_STYLES = Path(__file__).with_name("shared_word_styles.css").read_text(
+    encoding="utf-8"
+)
 
 
 def generate_html(
@@ -110,9 +113,11 @@ def generate_html(
     <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Noto+Nastaliq+Urdu:wght@400;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
+        {SHARED_WORD_STYLES}
+
         @page {{
-                    margin: 0; /* Removes URL, file path, date, and page numbers */
-                }}
+            margin: 0;
+        }}
         body {{
             font-family: 'Inter', sans-serif;
             background-color: white;
@@ -121,11 +126,6 @@ def generate_html(
             padding: 40px 20px;
         }}
 
-        .print-margin {{
-            display: none;
-        }}
-        
-        /* The main page container (A4/Print friendly) */
         .page-sheet {{
             background: white;
             padding: 40px;
@@ -133,7 +133,6 @@ def generate_html(
             border-radius: 8px;
         }}
 
-        /* The flex container that arranges words RTL */
         .hadith-container {{
             margin-top: 10rem;
             display: flex;
@@ -149,12 +148,7 @@ def generate_html(
             direction: rtl;
         }}
 
-        /* Individual word column */
         .word-card {{
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
             min-width: 60px;
         }}
 
@@ -174,10 +168,8 @@ def generate_html(
         }}
 
         .ayah-ending {{
-            display: flex;
             align-items: center;
             gap: 2rem;
-            direction: rtl;
             flex-shrink: 0;
         }}
 
@@ -191,7 +183,6 @@ def generate_html(
         }}
 
         .arabic {{
-            font-family: 'Amiri', serif;
             font-size: 42px;
             color: #1a1a1a;
             margin-bottom: 6px;
@@ -205,7 +196,6 @@ def generate_html(
         }}
 
         .urdu {{
-            font-family: 'Noto Nastaliq Urdu', serif;
             font-size: 26px;
             color: #111;
             line-height: 2.1; /* Nastaliq requires extra height */
@@ -213,12 +203,10 @@ def generate_html(
         }}
 
         .download-btn {{
-            display: inline-block;
             margin-top: 7rem;
             padding: 12px 24px;
             background-color: #0f172a;
             color: white;
-            text-decoration: none;
             border-radius: 8px;
             font-size: 16px;
             font-weight: 600;

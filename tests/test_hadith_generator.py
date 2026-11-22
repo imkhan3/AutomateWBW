@@ -7,7 +7,12 @@ from pathlib import Path
 from types import ModuleType, SimpleNamespace
 from unittest.mock import Mock, patch
 
-from hadith_generator import _select_languages, create_hadith_json
+from hadith_generator import (
+    _request_output_path,
+    _select_languages,
+    create_hadith_json,
+    main as run_hadith_generator,
+)
 from html_generator import generate_html
 from languages.language_catalog import load_language_options
 
@@ -41,6 +46,41 @@ class LanguageCatalogTests(unittest.TestCase):
 
 
 class HadithGenerationTests(unittest.TestCase):
+    def test_direct_entry_point_starts_hadith_creation(self) -> None:
+        with (
+            patch("hadith_generator.JSON_DIR") as json_dir,
+            patch("hadith_generator.create_hadith_json") as create_hadith,
+            patch(
+                "languages.language_catalog.load_language_options",
+                return_value=(("en", "English"), ("ur", "Urdu")),
+            ),
+        ):
+            run_hadith_generator()
+
+        json_dir.mkdir.assert_called_once_with(parents=True, exist_ok=True)
+        create_hadith.assert_called_once_with(
+            json_dir,
+            (("en", "English"), ("ur", "Urdu")),
+        )
+
+    def test_prompts_for_filename_and_adds_json_extension(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            with patch("builtins.input", return_value="my_hadith"):
+                output_path = _request_output_path(Path(temporary_directory))
+
+        self.assertEqual(output_path.name, "my_hadith.json")
+
+    def test_rejects_existing_filename(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            existing_path = Path(temporary_directory) / "existing.json"
+            existing_path.touch()
+
+            with (
+                patch("builtins.input", return_value="existing.json"),
+                self.assertRaises(FileExistsError),
+            ):
+                _request_output_path(Path(temporary_directory))
+
     def test_requests_only_selected_languages_and_saves_them(self) -> None:
         response_text = json.dumps(
             {"words": [{"ar": "بِسْمِ", "en": "in the name", "fr": "au nom"}]}
@@ -62,7 +102,10 @@ class HadithGenerationTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as temporary_directory:
             with (
-                patch("builtins.input", side_effect=["1", "بِسْمِ", ""]),
+                patch(
+                    "builtins.input",
+                    side_effect=["new_hadith", "1", "بِسْمِ", ""],
+                ),
                 patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}),
                 patch.dict(sys.modules, {"google": fake_google}),
             ):
@@ -74,6 +117,7 @@ class HadithGenerationTests(unittest.TestCase):
             saved_words = json.loads(output_path.read_text(encoding="utf-8"))
             schema = create_interaction.call_args.kwargs["response_format"]["schema"]
 
+        self.assertEqual(output_path.name, "new_hadith.json")
         self.assertEqual(
             saved_words,
             [{"ar": "بِسْمِ", "en": "in the name", "fr": "au nom"}],

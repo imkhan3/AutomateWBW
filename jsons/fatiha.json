@@ -1,0 +1,219 @@
+[
+  {
+    "ar": "بِسۡمِ",
+    "en": "In the name of",
+    "ur": "نام سے",
+    "yo": "Pẹ̀lú orúkọ",
+    "tr": "Adıyla / İsmiyle"
+  },
+  {
+    "ar": "ٱللَّهِ",
+    "en": "Allah",
+    "ur": "اللہ",
+    "yo": "Ọlọ́hun",
+    "tr": "Allah'ın"
+  },
+  {
+    "ar": "ٱلرَّحۡمَٰنِ",
+    "en": "The Entirely Merciful",
+    "ur": "جو بہت مہربان ہے",
+    "yo": "Ajọkẹ́-ayé",
+    "tr": "Rahmân (olan)"
+  },
+  {
+    "ar": "ٱلرَّحِيمِ",
+    "en": "the Especially Merciful",
+    "ur": "جو نہایت رحم کرنے والا ہے",
+    "yo": "Asakẹ́-ọ̀run",
+    "tr": "Rahîm (olan)"
+  },
+  {"ayah": true},
+  {"line_break": true},
+  {
+    "ar": "ٱلۡحَمۡدُ",
+    "en": "All praise",
+    "ur": "تمام تعریفیں",
+    "yo": "Gbogbo ọpẹ́",
+    "tr": "Hamd (bütün övgüler)"
+  },
+  {
+    "ar": "لِلَّهِ",
+    "en": "is for Allah",
+    "ur": "اللہ کے لیے ہیں",
+    "yo": "wà fún Ọlọ́hun",
+    "tr": "Allah'a aittir"
+  },
+  {
+    "ar": "رَبِّ",
+    "en": "the Lord",
+    "ur": "پروردگار",
+    "yo": "Olúwa",
+    "tr": "Rabbi"
+  },
+  {
+    "ar": "ٱلۡعَٰلَمِينَ",
+    "en": "of the worlds",
+    "ur": "تمام جہانوں کے",
+    "yo": "àwọn ẹ̀dá / gbogbo ayé",
+    "tr": "âlemlerin"
+  },
+  {"ayah": true},
+  {"line_break": true},
+  {
+    "ar": "ٱلرَّحۡمَٰنِ",
+    "en": "The Entirely Merciful",
+    "ur": "جو بہت مہربان ہے",
+    "yo": "Ajọkẹ́-ayé",
+    "tr": "Rahmân"
+  },
+  {
+    "ar": "ٱلرَّحِيمِ",
+    "en": "the Especially Merciful",
+    "ur": "جو نہایت رحم کرنے والا ہے",
+    "yo": "Asakẹ́-ọ̀run",
+    "tr": "Rahîm"
+  },
+  {"ayah": true},
+  {"line_break": true},
+  {
+    "ar": "مَٰلِكِ",
+    "en": "Master/Owner",
+    "ur": "مالک",
+    "yo": "Olùni / Ọba",
+    "tr": "Sahibi / Mâliki"
+  },
+  {
+    "ar": "يَوۡمِ",
+    "en": "of the Day",
+    "ur": "دن کے",
+    "yo": "ọjọ́",
+    "tr": "gününün"
+  },
+  {
+    "ar": "ٱلدِّينِ",
+    "en": "of Recompense",
+    "ur": "جزا (انصاف)",
+    "yo": "ẹ̀san",
+    "tr": "hesap (ceza / karşılık)"
+  },
+  {"ayah": true},
+  {"line_break": true},
+  {
+    "ar": "إِيَّاكَ",
+    "en": "You alone",
+    "ur": "صرف تیری",
+    "yo": "Ìwọ nìkan",
+    "tr": "Yalnız Sana"
+  },
+  {
+    "ar": "نَعۡبُدُ",
+    "en": "we worship",
+    "ur": "ہم عبادت کرتے ہیں",
+    "yo": "la ń jọ́sìn fún",
+    "tr": "kulluk ederiz"
+  },
+  {
+    "ar": "وَإِيَّاكَ",
+    "en": "and You alone",
+    "ur": "صرف تیری",
+    "yo": "àti Ìwọ nìkan",
+    "tr": "ve yalnız Senden"
+  },
+  {
+    "ar": "نَسۡتَعِينُ",
+    "en": "we ask for help",
+    "ur": "ہم مدد مانگتے ہیں",
+    "yo": "la ń tọ́rọ ìrànlọ́wọ́",
+    "tr": "yardım dileriz"
+  },
+  {"ayah": true},
+  {"line_break": true},
+  {
+    "ar": "ٱهۡدِنَا",
+    "en": "Guide us",
+    "ur": "ہمیں دکھا",
+    "yo": "Tọ́ wa sí",
+    "tr": "Bizi ilet"
+  },
+  {
+    "ar": "ٱلصِّرَٰطَ",
+    "en": "the path",
+    "ur": "راستہ",
+    "yo": "ọ̀nà",
+    "tr": "yola"
+  },
+  {
+    "ar": "ٱلۡمُسۡتَقِيمَ",
+    "en": "the straight",
+    "ur": "سیدھا",
+    "yo": "tí ó tọ́",
+    "tr": "dosdoğru"
+  },
+  {"ayah": true},
+  {"line_break": true},
+  {
+    "ar": "صِرَٰطَ",
+    "en": "the path",
+    "ur": "راستہ",
+    "yo": "ọ̀nà",
+    "tr": "yoluna"
+  },
+  {
+    "ar": "ٱلَّذِينَ",
+    "en": "of those",
+    "ur": "ان لوگوں کا",
+    "yo": "àwọn tí",
+    "tr": "o kimselerin"
+  },
+  {
+    "ar": "أَنۡعَمۡتَ",
+    "en": "You have bestowed favor",
+    "ur": "جن پر آپ نے انعام کیا",
+    "yo": "O ṣe ìdẹ̀ra fún",
+    "tr": "nimet verdiğin"
+  },
+  {
+    "ar": "عَلَيۡهِمۡ",
+    "en": "upon them",
+    "ur": "ان پر",
+    "yo": "lórí wọn",
+    "tr": "kendilerine"
+  },
+  {
+    "ar": "غَيۡرِ",
+    "en": "not",
+    "ur": "نہ کہ",
+    "yo": "kì í ṣe ti",
+    "tr": "dışındakilerin / olmayanların"
+  },
+  {
+    "ar": "ٱلۡمَغۡضُوبِ",
+    "en": "those who incurred wrath",
+    "ur": "غضب کیے گئے",
+    "yo": "àwọn tí a bínú sí",
+    "tr": "gazaba uğramış"
+  },
+  {
+    "ar": "عَلَيۡهِمۡ",
+    "en": "upon them",
+    "ur": "ان پر",
+    "yo": "lórí wọn",
+    "tr": "kendilerine"
+  },
+  {
+    "ar": "وَلَا",
+    "en": "and not",
+    "ur": "اور نہ",
+    "yo": "kò sì jẹ́ ti",
+    "tr": "ve ne de"
+  },
+  {
+    "ar": "ٱلضَّآلِّينَ",
+    "en": "those who are astray",
+    "ur": "گمراہ",
+    "yo": "àwọn tí wọ́n sìnà",
+    "tr": "sapmışların"
+  },
+  {"ayah": true},
+  {"line_break": true}
+]

@@ -1,0 +1,21 @@
+.word-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.arabic,
+.title-ar,
+.cover-title-ar {
+    font-family: 'Amiri', serif;
+}
+
+.urdu {
+    font-family: 'Noto Nastaliq Urdu', serif;
+}
+
+.ayah-ending {
+    display: flex;
+    direction: rtl;
+}

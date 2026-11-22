@@ -2,6 +2,39 @@ import json
 import os
 from pathlib import Path
 
+BASE_DIR = Path(__file__).resolve().parent
+JSON_DIR = BASE_DIR / "jsons"
+
+
+def _request_output_path(json_dir: Path) -> Path:
+    try:
+        filename = input(
+            "Enter a filename for the new Hadith JSON (with or without .json): "
+        ).strip()
+    except EOFError as exc:
+        raise ValueError("A filename must be entered for the new Hadith JSON.") from exc
+
+    if not filename:
+        raise ValueError("A filename must be entered for the new Hadith JSON.")
+    if (
+        Path(filename).name != filename
+        or any(character in filename for character in '<>:"/\\|?*')
+        or any(ord(character) < 32 for character in filename)
+        or filename.endswith((" ", "."))
+    ):
+        raise ValueError("Enter a valid filename without a directory path.")
+
+    suffix = Path(filename).suffix
+    if suffix and suffix.lower() != ".json":
+        raise ValueError("The Hadith filename must use the .json extension.")
+    if not suffix:
+        filename += ".json"
+
+    output_json = json_dir / filename
+    if output_json.exists():
+        raise FileExistsError(f"'{output_json.name}' already exists.")
+    return output_json
+
 
 def _select_languages(
     language_options: tuple[tuple[str, str], ...],
@@ -42,6 +75,7 @@ def create_hadith_json(
     json_dir: Path,
     language_options: tuple[tuple[str, str], ...],
 ) -> Path:
+    output_json = _request_output_path(json_dir)
     selected_languages = _select_languages(language_options)
     translation_codes = [code for code, _ in selected_languages]
     translation_names = [name for _, name in selected_languages]
@@ -60,13 +94,6 @@ def create_hadith_json(
     arabic_text = "\n".join(arabic_lines).strip()
     if not arabic_text:
         raise ValueError("Arabic text cannot be empty.")
-
-    filename_index = 1
-    while True:
-        output_json = json_dir / f"new_hadith_{filename_index}.json"
-        if not output_json.exists():
-            break
-        filename_index += 1
 
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
@@ -197,3 +224,14 @@ Arabic text:
 
     print(f"Saved generated Hadith to {output_json}.")
     return output_json
+
+
+def main() -> None:
+    from languages.language_catalog import load_language_options
+
+    JSON_DIR.mkdir(parents=True, exist_ok=True)
+    create_hadith_json(JSON_DIR, load_language_options())
+
+
+if __name__ == "__main__":
+    main()

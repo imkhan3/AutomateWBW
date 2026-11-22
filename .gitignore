@@ -1,12 +1,9 @@
 # Exclude all generated HTML files
 *.html
 
-# Exclude all JSONs except nas.json and the salah_booklet template
-jsons/*
-!jsons/nas.json
-!jsons/book_templates/
-jsons/book_templates/*
-!jsons/book_templates/salah_booklet.json
+# Exclude other booklet templates, but keep the main template
+/book_templates/*
+!/book_templates/salah_booklet.json
 
 # Standard Python ignores
 __pycache__/
