@@ -21,14 +21,19 @@ class MarkdownBookletTests(unittest.TestCase):
         self.assertIn("<h1>Introduction</h1>", html)
         self.assertIn("<blockquote>", html)
         self.assertIn('class="footnotes-list"', html)
-        self.assertIn('class="markdown-pagebreak"', html)
         self.assertIn('class="markdown-special markdown-cover"', html)
         self.assertIn('class="markdown-special markdown-contact"', html)
         self.assertIn("Markdown booklet sample", html)
-        self.assertIn("break-before: page", html)
+        self.assertIn("@footnote", html)
+        self.assertIn("float: footnote", html)
+        self.assertIn("pagedjs-0.4.3.min.js", html)
         self.assertIn("orphans: 2", html)
         self.assertIn("widows: 2", html)
         self.assertIn("--arabic-font-size: 16pt", html)
+        self.assertIn("margin: 0 8pt 11pt", html)
+        self.assertIn("align-items: center", html)
+        self.assertIn("justify-content: flex-end", html)
+        self.assertIn("flex-direction: column", html)
         for selector in (
             ".markdown-content .hadith-line",
             ".markdown-content .word-card",
@@ -37,6 +42,15 @@ class MarkdownBookletTests(unittest.TestCase):
         ):
             self.assertIn(selector, html)
         self.assertIn("break-inside: avoid", html)
+
+    def test_manual_pagebreak_shortcode_is_preserved(self) -> None:
+        rendered = markdown_booklet._render_markdown_body(
+            "First page.\n\n<!-- pagebreak -->\n\nSecond page.",
+            ("en",),
+            {},
+        )
+
+        self.assertIn('class="markdown-pagebreak"', rendered)
 
     def test_wbw_shortcode_uses_json_boundaries_without_header(self) -> None:
         markup = markdown_booklet._render_wbw_shortcode(

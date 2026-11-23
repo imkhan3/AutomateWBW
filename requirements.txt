@@ -3,3 +3,4 @@ markdown-it-py>=3.0
 mdit-py-plugins>=0.4
 PyYAML>=6.0
 pypdf>=5.0
+websockets>=13.0

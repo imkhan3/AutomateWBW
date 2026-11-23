@@ -33,12 +33,5 @@ the word **رَدٌّ**.[^1]
 
 {{wbw source="bida1.json" start_at="مَنْ" end_at="رَدٌّ"}}
 
-<!-- pagebreak -->
-
-## Reflection
-
-The shortcode has no chapter heading because `title_en` and `title_ar` were
-omitted. Add both attributes when a titled WBW section is wanted.
-
 [^1]: Sahih al-Bukhari and Sahih Muslim; wording follows the supplied
     word-by-word source file.

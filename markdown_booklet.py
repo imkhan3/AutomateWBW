@@ -1,16 +1,24 @@
+import asyncio
+import base64
 import json
 import os
 import re
 import shlex
 import shutil
+import socket
 import subprocess
 import tempfile
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
 from pathlib import Path
 
 import yaml
 from markdown_it import MarkdownIt
 from mdit_py_plugins.footnote import footnote_plugin
 from pypdf import PdfReader, PdfWriter
+import websockets
 
 import automate_booklet
 
@@ -25,6 +33,66 @@ SHORTCODE_PATTERN = re.compile(
 )
 PAGEBREAK_PATTERN = re.compile(r"^[ \t]*<!--\s*pagebreak\s*-->[ \t]*$", re.I)
 MARKDOWN_PARSER = MarkdownIt("commonmark").use(footnote_plugin)
+PAGEDJS_PATH = automate_booklet.BASE_DIR / "vendor" / "pagedjs-0.4.3.min.js"
+FOOTNOTE_SCRIPT = """
+window.PagedConfig = { auto: false };
+
+(function () {
+    var section = document.querySelector(".footnotes");
+    if (!section) {
+        return;
+    }
+
+    var definitions = new Map(
+        Array.from(section.querySelectorAll("li[id]")).map(function (item) {
+            return [item.id, item];
+        })
+    );
+    var placed = new Set();
+
+    document.querySelectorAll(".markdown-content .footnote-ref").forEach(
+        function (reference) {
+            if (reference.closest(".footnotes")) {
+                return;
+            }
+
+            var link = reference.querySelector("a[href^='#fn']");
+            if (!link) {
+                return;
+            }
+
+            var noteId = link.getAttribute("href").slice(1);
+            var definition = definitions.get(noteId);
+            if (!definition) {
+                throw new Error("Missing Markdown footnote definition: " + noteId);
+            }
+
+            if (placed.has(noteId)) {
+                var repeat = document.createElement("sup");
+                repeat.className = "markdown-footnote-repeat";
+                repeat.textContent = link.textContent;
+                reference.replaceWith(repeat);
+                return;
+            }
+
+            var note = definition.cloneNode(true);
+            note.removeAttribute("id");
+            note.querySelectorAll(".footnote-backref").forEach(function (backref) {
+                backref.remove();
+            });
+
+            var float = document.createElement("span");
+            float.className = "markdown-footnote";
+            float.id = "markdown-" + noteId;
+            float.innerHTML = note.innerHTML;
+            reference.replaceWith(float);
+            placed.add(noteId);
+        }
+    );
+
+    section.remove();
+})();
+"""
 
 
 def _read_markdown_template(template_path: Path) -> tuple[dict, str]:
@@ -269,10 +337,13 @@ def render_markdown_html(template_path: Path, layout: str) -> str:
 
     if layout == "letter":
         page_size = "8.5in 11in"
-        page_height = "11in"
+        page_content_height = "10.2in"
     else:
         page_size = "5.5in 8.5in"
-        page_height = "8.5in"
+        page_content_height = "7.7in"
+    if not PAGEDJS_PATH.is_file():
+        raise FileNotFoundError(f"Paged.js bundle not found: {PAGEDJS_PATH}")
+    pagedjs_uri = PAGEDJS_PATH.as_uri()
 
     font_variables = "; ".join(
         f"--{language}-font-size: {size:g}pt"
@@ -281,7 +352,7 @@ def render_markdown_html(template_path: Path, layout: str) -> str:
     style_variables = (
         f"{font_variables}; --chapter-content-gap: {chapter_gap:g}pt; "
         f"--ayah-marker-font-size: {ayah_font_size:g}pt; "
-        f"--markdown-page-height: {page_height}"
+        f"--markdown-content-height: {page_content_height}"
     )
 
     parts = []
@@ -324,7 +395,13 @@ def render_markdown_html(template_path: Path, layout: str) -> str:
 
         @page {{
             size: {page_size};
-            margin: 0.6in 0.55in;
+            margin: 0.4in;
+
+            @footnote {{
+                margin-top: 7pt;
+                padding-top: 5pt;
+                border-top: 1px solid #94a3b8;
+            }}
         }}
 
         html, body {{
@@ -401,12 +478,13 @@ def render_markdown_html(template_path: Path, layout: str) -> str:
         }}
 
         .markdown-content p {{
+            margin: 0 0 0.65em;
             orphans: 2;
             widows: 2;
         }}
 
         .markdown-content blockquote {{
-            margin: 1em 1.5em;
+            margin: 0.75em 1em;
             padding-left: 1em;
             border-left: 3px solid #94a3b8;
             break-inside: avoid;
@@ -426,7 +504,7 @@ def render_markdown_html(template_path: Path, layout: str) -> str:
             display: inline-block;
             vertical-align: top;
             min-width: 30pt;
-            margin: 0 8pt 7pt;
+            margin: 0 8pt 11pt;
             break-inside: avoid;
             page-break-inside: avoid;
         }}
@@ -476,8 +554,10 @@ def render_markdown_html(template_path: Path, layout: str) -> str:
             box-sizing: border-box;
             width: auto;
             height: auto;
-            min-height: calc(var(--markdown-page-height) - 1.2in);
+            min-height: var(--markdown-content-height);
             margin: 0;
+            display: flex;
+            flex-direction: column;
             overflow: visible;
         }}
 
@@ -533,11 +613,14 @@ def render_markdown_html(template_path: Path, layout: str) -> str:
         }}
 
         .markdown-content .contact-page {{
+            align-items: center;
             justify-content: flex-end;
+            padding-bottom: 0;
+            text-align: center;
         }}
 
         .markdown-content .contact-block {{
-            margin-bottom: 16pt;
+            margin-bottom: 0;
             color: #475569;
             font-size: 8pt;
             line-height: 1.6;
@@ -568,13 +651,24 @@ def render_markdown_html(template_path: Path, layout: str) -> str:
             page-break-before: always;
         }}
 
-        .markdown-content .footnotes {{
-            margin-top: 2em;
-            border-top: 1px solid #94a3b8;
-            font-size: 0.9em;
+        .markdown-content .markdown-footnote {{
+            float: footnote;
+            font-size: 8.5pt;
+            line-height: 1.35;
         }}
 
-        .markdown-content .footnote-ref {{
+        .markdown-content .markdown-footnote::footnote-call {{
+            content: "[" counter(footnote) "]";
+            font-size: 0.75em;
+            vertical-align: super;
+        }}
+
+        .markdown-content .markdown-footnote::footnote-marker {{
+            content: counter(footnote) ". ";
+            font-weight: 700;
+        }}
+
+        .markdown-content .markdown-footnote-repeat {{
             font-size: 0.75em;
             vertical-align: super;
         }}
@@ -584,6 +678,8 @@ def render_markdown_html(template_path: Path, layout: str) -> str:
     <main class="booklet-container markdown-content" style="{style_variables}">
         {"".join(parts)}
     </main>
+    <script>{FOOTNOTE_SCRIPT}</script>
+    <script src="{automate_booklet.escape(pagedjs_uri)}"></script>
 </body>
 </html>
 """
@@ -628,6 +724,157 @@ def _find_pdf_browser() -> Path:
     )
 
 
+async def _render_with_devtools(
+    browser_process: subprocess.Popen,
+    port: int,
+    html_uri: str,
+    output_path: Path,
+) -> None:
+    version_url = f"http://127.0.0.1:{port}/json/version"
+    startup_deadline = time.monotonic() + 15
+    version = None
+    while time.monotonic() < startup_deadline:
+        if browser_process.poll() is not None:
+            raise RuntimeError("The headless browser exited before DevTools started.")
+        try:
+            with urllib.request.urlopen(version_url, timeout=1) as response:
+                version = json.load(response)
+            break
+        except (OSError, urllib.error.URLError):
+            time.sleep(0.1)
+    if version is None:
+        raise RuntimeError("Timed out waiting for the headless browser's DevTools.")
+
+    target_url = (
+        f"http://127.0.0.1:{port}/json/new?"
+        f"{urllib.parse.quote(html_uri, safe='')}"
+    )
+    request = urllib.request.Request(target_url, method="PUT")
+    with urllib.request.urlopen(request, timeout=10) as response:
+        target = json.load(response)
+
+    async with websockets.connect(
+        target["webSocketDebuggerUrl"],
+        max_size=100_000_000,
+        open_timeout=10,
+    ) as connection:
+        request_id = 0
+
+        async def send_command(
+            method: str,
+            params: dict | None = None,
+            timeout: int = 60,
+        ) -> dict:
+            nonlocal request_id
+            request_id += 1
+            command_id = request_id
+            await connection.send(
+                json.dumps(
+                    {
+                        "id": command_id,
+                        "method": method,
+                        "params": params or {},
+                    }
+                )
+            )
+            while True:
+                message = json.loads(
+                    await asyncio.wait_for(connection.recv(), timeout=timeout)
+                )
+                if message.get("id") != command_id:
+                    continue
+                if "error" in message:
+                    raise RuntimeError(
+                        f"Browser command '{method}' failed: "
+                        f"{message['error'].get('message', message['error'])}"
+                    )
+                return message.get("result", {})
+
+        async def evaluate(
+            expression: str,
+            await_promise: bool = False,
+            timeout: int = 60,
+        ) -> object:
+            result = await send_command(
+                "Runtime.evaluate",
+                {
+                    "expression": expression,
+                    "awaitPromise": await_promise,
+                    "returnByValue": True,
+                    "userGesture": True,
+                },
+                timeout,
+            )
+            if "exceptionDetails" in result:
+                raise RuntimeError(
+                    "Browser script failed: "
+                    f"{result['exceptionDetails'].get('text', 'Unknown error')}"
+                )
+            return result.get("result", {}).get("value")
+
+        await send_command("Page.enable")
+        await send_command("Runtime.enable")
+        await send_command("Page.navigate", {"url": html_uri})
+
+        ready_deadline = time.monotonic() + 30
+        while time.monotonic() < ready_deadline:
+            ready = await evaluate(
+                "document.readyState === 'complete' && "
+                "typeof window.PagedPolyfill !== 'undefined'"
+            )
+            if ready:
+                break
+            await asyncio.sleep(0.1)
+        else:
+            raise RuntimeError("The Markdown renderer did not finish loading.")
+
+        await evaluate(
+            "document.fonts.ready.then(function () { return true; })",
+            await_promise=True,
+            timeout=30,
+        )
+        page_count = await evaluate(
+            "window.PagedPolyfill.preview().then(function (flow) { "
+            "return flow.total; })",
+            await_promise=True,
+            timeout=120,
+        )
+        if not isinstance(page_count, int) or page_count < 1:
+            raise RuntimeError("Paged.js did not produce any booklet pages.")
+
+        rendered_page_count = await evaluate(
+            "document.querySelectorAll("
+            '".pagedjs_pages .pagedjs_page").length'
+        )
+        if rendered_page_count != page_count:
+            raise RuntimeError(
+                "Paged.js page count did not match its rendered page elements."
+            )
+
+        pdf = await send_command(
+            "Page.printToPDF",
+            {
+                "printBackground": True,
+                "preferCSSPageSize": True,
+                "displayHeaderFooter": False,
+            },
+            timeout=120,
+        )
+        output_path.write_bytes(base64.b64decode(pdf["data"]))
+
+    try:
+        async with websockets.connect(
+            version["webSocketDebuggerUrl"],
+            max_size=1_000_000,
+            open_timeout=5,
+        ) as browser_connection:
+            await browser_connection.send(
+                json.dumps({"id": 1, "method": "Browser.close"})
+            )
+    except (OSError, websockets.exceptions.ConnectionClosed):
+        pass
+
+
 def _render_html_to_pdf(html_content: str, output_path: Path) -> None:
     browser = _find_pdf_browser()
     with tempfile.TemporaryDirectory(prefix="automate-wbw-") as directory:
@@ -637,32 +884,45 @@ def _render_html_to_pdf(html_content: str, output_path: Path) -> None:
         profile_path = temporary_dir / "browser-profile"
         html_path.write_text(html_content, encoding="utf-8")
 
-        result = subprocess.run(
+        with socket.socket() as port_socket:
+            port_socket.bind(("127.0.0.1", 0))
+            port = port_socket.getsockname()[1]
+
+        browser_process = subprocess.Popen(
             [
                 str(browser),
                 "--headless",
                 "--disable-gpu",
                 "--no-first-run",
                 "--no-default-browser-check",
-                "--no-pdf-header-footer",
-                "--virtual-time-budget=10000",
+                "--no-startup-window",
+                "--allow-file-access-from-files",
+                f"--remote-debugging-port={port}",
                 f"--user-data-dir={profile_path}",
-                f"--print-to-pdf={temporary_pdf}",
-                html_path.as_uri(),
             ],
-            capture_output=True,
-            text=True,
-            timeout=120,
-            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
         )
-        if result.returncode:
-            raise RuntimeError(
-                f"Headless browser PDF rendering failed: {result.stderr.strip()}"
+        try:
+            asyncio.run(
+                _render_with_devtools(
+                    browser_process,
+                    port,
+                    html_path.as_uri(),
+                    temporary_pdf,
+                )
             )
+        finally:
+            if browser_process.poll() is None:
+                browser_process.terminate()
+                browser_process.wait(timeout=10)
+
         if not temporary_pdf.is_file() or temporary_pdf.stat().st_size == 0:
             raise RuntimeError(
                 "The headless browser did not produce a Markdown booklet PDF."
             )
+        if not PdfReader(str(temporary_pdf)).pages:
+            raise RuntimeError("The Markdown booklet PDF contains no pages.")
         shutil.copyfile(temporary_pdf, output_path)
 
 
