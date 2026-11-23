@@ -1,9 +1,11 @@
 # Exclude all generated HTML files
 *.html
+/booklet.pdf
 
 # Exclude other booklet templates, but keep the main template
 /book_templates/*
 !/book_templates/salah_booklet.json
+!/book_templates/*.md
 
 # Standard Python ignores
 __pycache__/

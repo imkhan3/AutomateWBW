@@ -51,6 +51,13 @@ class BookletTemplateTests(unittest.TestCase):
             self.assertEqual(generated_html.count("@page {"), 1)
             self.assertIn(".cover-title-ar", generated_html)
 
+    def test_select_template_accepts_markdown_files(self) -> None:
+        template_path = automate_booklet.TEMPLATE_DIR / "bida1_sample.md"
+        with patch("builtins.input", return_value="bida1_sample.md"):
+            selected = automate_booklet.select_template()
+
+        self.assertEqual(selected, template_path)
+
     def test_half_letter_modes_use_the_selected_page_layout(self) -> None:
         template_path = automate_booklet.TEMPLATE_DIR / "salah_booklet.json"
         with tempfile.TemporaryDirectory() as temporary_directory:

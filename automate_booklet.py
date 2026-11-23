@@ -733,19 +733,23 @@ def _resolve_template_path(argument: str) -> Path:
         template_path.relative_to(TEMPLATE_DIR.resolve())
     except ValueError as exc:
         raise ValueError(
-            f"Template JSON files must be located in '{TEMPLATE_DIR}'."
+            f"Template files must be located in '{TEMPLATE_DIR}'."
         ) from exc
-    if template_path.suffix.lower() != ".json":
-        raise ValueError("The template file must have a .json extension.")
+    if template_path.suffix.lower() not in {".json", ".md"}:
+        raise ValueError("The template file must have a .json or .md extension.")
     if not template_path.is_file():
         raise FileNotFoundError(f"Template file not found: {template_path}")
     return template_path
 
 
 def select_template() -> Path:
-    template_files = sorted(TEMPLATE_DIR.glob("*.json"))
+    template_files = sorted(
+        [*TEMPLATE_DIR.glob("*.json"), *TEMPLATE_DIR.glob("*.md")]
+    )
     if not template_files:
-        raise FileNotFoundError(f"No JSON templates found in '{TEMPLATE_DIR}'.")
+        raise FileNotFoundError(
+            f"No JSON or Markdown templates found in '{TEMPLATE_DIR}'."
+        )
 
     print("Available booklet templates:")
     for index, template_path in enumerate(template_files, start=1):
@@ -812,6 +816,12 @@ def generate_booklet(template_path: Path, layout: str = "imposed") -> Path:
         raise ValueError(
             "Layout must be 'letter', 'half-letter', or 'imposed'."
         )
+    if template_path.suffix.lower() == ".md":
+        from markdown_booklet import generate_markdown_booklet
+
+        return generate_markdown_booklet(template_path, layout)
+    if template_path.suffix.lower() != ".json":
+        raise ValueError("The template file must have a .json or .md extension.")
 
     with template_path.open("r", encoding="utf-8") as file:
         template = json.load(file)
@@ -883,12 +893,12 @@ def generate_booklet(template_path: Path, layout: str = "imposed") -> Path:
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
-        description="Generate a booklet from a JSON page template."
+        description="Generate a booklet from a JSON or Markdown template."
     )
     parser.add_argument(
         "template",
         nargs="?",
-        help="Template JSON filename in book_templates or its path",
+        help="Template JSON or Markdown filename in book_templates or its path",
     )
     parser.add_argument(
         "--layout",
