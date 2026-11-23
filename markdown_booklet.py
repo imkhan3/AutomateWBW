@@ -12,12 +12,14 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import webbrowser
 from pathlib import Path
 
 import yaml
 from markdown_it import MarkdownIt
 from mdit_py_plugins.footnote import footnote_plugin
 from pypdf import PdfReader, PdfWriter
+from pypdf.generic import DecodedStreamObject, NameObject
 import websockets
 
 import automate_booklet
@@ -943,7 +945,7 @@ def _impose_pdf(source_pdf: Path, output_pdf: Path) -> None:
             (padded_count - 1 - 2 * sheet_index, 2 * sheet_index),
             (2 * sheet_index + 1, padded_count - 2 - 2 * sheet_index),
         )
-        for left_index, right_index in page_pairs:
+        for side_index, (left_index, right_index) in enumerate(page_pairs):
             sheet = writer.add_blank_page(sheet_width, sheet_height)
             left_page = pages[left_index]
             right_page = pages[right_index]
@@ -951,8 +953,29 @@ def _impose_pdf(source_pdf: Path, output_pdf: Path) -> None:
                 sheet.merge_translated_page(left_page, 0, 0)
             if right_page is not None:
                 sheet.merge_translated_page(right_page, half_width, 0)
+            if sheet_index == 0 and side_index == 0:
+                _add_staple_marks(sheet, writer, sheet_width, sheet_height)
 
     writer.write(str(output_pdf))
+
+
+def _add_staple_marks(page, writer, sheet_width: float, sheet_height: float) -> None:
+    center_x = sheet_width / 2
+    line_height = 12
+    commands = ["q", "0.65 G", "0.6 w"]
+    for fraction in (0.25, 0.5, 0.75):
+        center_y = sheet_height * fraction
+        commands.append(
+            f"{center_x:g} {center_y - line_height / 2:g} m "
+            f"{center_x:g} {center_y + line_height / 2:g} l S"
+        )
+    commands.append("Q")
+
+    content = page.get_contents()
+    existing_data = content.get_data() if content else b""
+    stream = DecodedStreamObject()
+    stream.set_data(existing_data + b"\n" + "\n".join(commands).encode("ascii"))
+    page[NameObject("/Contents")] = writer._add_object(stream)
 
 
 def generate_markdown_booklet(template_path: Path, layout: str) -> Path:
@@ -971,4 +994,6 @@ def generate_markdown_booklet(template_path: Path, layout: str) -> Path:
         _render_html_to_pdf(html_content, OUTPUT_PDF)
 
     print(f"Generated Markdown booklet PDF from {template_path.name}: {OUTPUT_PDF}")
+    if not webbrowser.open(OUTPUT_PDF.as_uri()):
+        raise RuntimeError("The PDF was generated, but no browser could be opened.")
     return OUTPUT_PDF

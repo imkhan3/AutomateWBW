@@ -43,6 +43,7 @@ body {
 }
 
 .sheet {
+    position: relative;
     background: white;
     box-sizing: border-box;
     width: 11in;
@@ -54,6 +55,28 @@ body {
     page-break-after: always;
     break-after: page;
     overflow: hidden;
+}
+
+.staple-marks {
+    position: absolute;
+    top: calc(25% - 0.09in);
+    bottom: calc(25% - 0.09in);
+    left: 50%;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    width: 0;
+    pointer-events: none;
+    transform: translateX(-50%);
+}
+
+.staple-marks span {
+    display: block;
+    width: 0.6pt;
+    height: 0.18in;
+    background: #9ca3af;
 }
 
 .half-page {
@@ -708,11 +731,18 @@ def _impose_pages(pages: list[str]) -> str:
         for side_index, (left_page_num, right_page_num) in enumerate(page_pairs):
             side = "Front" if side_index == 0 else "Back"
             sheet_num = sheet_index + 1
+            staple_marks = (
+                '<div class="staple-marks" aria-hidden="true">'
+                "<span></span><span></span><span></span></div>"
+                if sheet_index == 0 and side_index == 0
+                else ""
+            )
             sheets_html.append(f"""
         <!-- Sheet {sheet_num} ({side}): Pages {left_page_num} & {right_page_num} -->
         <div class="sheet">
             {padded_pages[left_page_num - 1]}
             {padded_pages[right_page_num - 1]}
+        {staple_marks}
         </div>
             """)
     return "\n".join(sheets_html)

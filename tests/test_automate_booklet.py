@@ -79,6 +79,15 @@ class BookletTemplateTests(unittest.TestCase):
                         '<div class="sheet">' in generated_html,
                         has_sheet_wrapper,
                     )
+                    self.assertEqual(
+                        generated_html.count('class="staple-marks"'),
+                        1 if layout == "imposed" else 0,
+                    )
+                    if layout == "imposed":
+                        self.assertIn(
+                            "top: calc(25% - 0.09in)",
+                            generated_html,
+                        )
 
 
 if __name__ == "__main__":

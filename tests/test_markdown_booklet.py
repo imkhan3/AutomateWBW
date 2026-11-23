@@ -116,6 +116,10 @@ class MarkdownBookletTests(unittest.TestCase):
                     output_path = Path(temporary_directory) / f"{layout}.pdf"
                     with (
                         patch.object(markdown_booklet, "OUTPUT_PDF", output_path),
+                        patch(
+                            "markdown_booklet.webbrowser.open",
+                            return_value=True,
+                        ) as open_pdf,
                         patch.object(
                             markdown_booklet,
                             "_render_html_to_pdf",
@@ -132,6 +136,7 @@ class MarkdownBookletTests(unittest.TestCase):
 
                     reader = PdfReader(str(output_path))
                     self.assertEqual(len(reader.pages), expected_count)
+                    open_pdf.assert_called_once_with(output_path.as_uri())
                     for page in reader.pages:
                         self.assertAlmostEqual(
                             float(page.mediabox.width),
@@ -141,6 +146,28 @@ class MarkdownBookletTests(unittest.TestCase):
                             float(page.mediabox.height),
                             expected_size[1],
                         )
+                    if layout == "imposed":
+                        first_page_content = (
+                            reader.pages[0].get_contents().get_data()
+                        )
+                        mark_commands = [
+                            line
+                            for line in first_page_content.splitlines()
+                            if line.endswith(b"l S")
+                        ]
+                        self.assertEqual(
+                            mark_commands,
+                            [
+                                b"396 147 m 396 159 l S",
+                                b"396 300 m 396 312 l S",
+                                b"396 453 m 396 465 l S",
+                            ],
+                        )
+                        for page in reader.pages[1:]:
+                            self.assertNotIn(
+                                b"0.65 G 0.6 w",
+                                page.get_contents().get_data(),
+                            )
 
 
 if __name__ == "__main__":
