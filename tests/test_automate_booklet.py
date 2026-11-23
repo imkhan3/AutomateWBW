@@ -85,9 +85,14 @@ class BookletTemplateTests(unittest.TestCase):
                     )
                     if layout == "imposed":
                         self.assertIn(
-                            "top: calc(25% - 0.09in)",
+                            "top: calc(15% - 0.09in)",
                             generated_html,
                         )
+                        self.assertIn(
+                            "border-left: 0.6pt solid #9ca3af",
+                            generated_html,
+                        )
+                        self.assertIn("z-index: 1000", generated_html)
 
 
 if __name__ == "__main__":

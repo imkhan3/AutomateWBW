@@ -59,8 +59,8 @@ body {
 
 .staple-marks {
     position: absolute;
-    top: calc(25% - 0.09in);
-    bottom: calc(25% - 0.09in);
+    top: calc(15% - 0.09in);
+    bottom: calc(15% - 0.09in);
     left: 50%;
     z-index: 1;
     display: flex;
@@ -70,13 +70,15 @@ body {
     width: 0;
     pointer-events: none;
     transform: translateX(-50%);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
 }
 
 .staple-marks span {
     display: block;
-    width: 0.6pt;
+    width: 0;
     height: 0.18in;
-    background: #9ca3af;
+    border-left: 0.6pt solid #9ca3af;
 }
 
 .half-page {
@@ -285,6 +287,7 @@ body {
 
 .print-btn {
     position: fixed;
+    z-index: 1000;
     bottom: 24px;
     right: 24px;
     background: #0f172a;
