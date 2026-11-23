@@ -14,7 +14,8 @@ SHARED_WORD_STYLES = (BASE_DIR / "shared_word_styles.css").read_text(
 )
 PAGE_STYLES = {
     "imposed": "@page { size: 11in 8.5in; margin: 0; }",
-    "standard": "@page { size: 8.5in 11in; margin: 0; }",
+    "letter": "@page { size: 8.5in 11in; margin: 0; }",
+    "half-letter": "@page { size: 5.5in 8.5in; margin: 0; }",
 }
 DEFAULT_FONT_SIZES_PT = {"arabic": 15, "english": 7.5, "urdu": 9}
 DEFAULT_CHAPTER_CONTENT_GAP_PT = 20
@@ -294,7 +295,7 @@ body {
 }
 """
 
-STANDARD_PAGE_STYLES = """
+LETTER_PAGE_STYLES = """
 .booklet-container {
     width: 8.5in;
 }
@@ -315,6 +316,36 @@ STANDARD_PAGE_STYLES = """
     .booklet-container {
         margin: 0;
         width: 8.5in;
+    }
+
+    .half-page {
+        margin: 0;
+        box-shadow: none;
+    }
+}
+"""
+
+HALF_LETTER_PAGE_STYLES = """
+.booklet-container {
+    width: 5.5in;
+}
+
+.half-page {
+    width: 5.5in;
+    height: 8.5in;
+    margin: 0 auto 24px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+}
+
+.half-page:not(:last-child) {
+    page-break-after: always;
+    break-after: page;
+}
+
+@media print {
+    .booklet-container {
+        margin: 0;
+        width: 5.5in;
     }
 
     .half-page {
@@ -743,27 +774,44 @@ def select_template() -> Path:
 
 
 def select_layout() -> str:
-    print("Select PDF layout:")
-    print("  1. Standard - letter (8.5 x 11), one page per sheet, template order")
-    print(
-        "  2. Imposed booklet - two pages per side, print order for folding; "
-        "pads to a multiple of 4"
-    )
+    print("Select finished page size:")
+    print("  1. 8.5 x 11 inches")
+    print("  2. 5.5 x 8.5 inches")
     try:
         choice = input("Choose 1 or 2 [default: 2]: ").strip().lower()
     except EOFError:
         choice = ""
 
-    if choice in {"", "2", "imposed"}:
+    if choice in {"1", "8.5x11", "letter"}:
+        return "letter"
+    if choice not in {"", "2", "5.5x8.5", "half-letter"}:
+        raise ValueError("Select 1 for 8.5 x 11 or 2 for 5.5 x 8.5 inches.")
+
+    print("Select page order for 5.5 x 8.5 inch pages:")
+    print("  1. Original order, one page per sheet")
+    print(
+        "  2. Imposed for booklet printing, two pages per side "
+        "(pads to a multiple of 4)"
+    )
+    try:
+        order_choice = input("Choose 1 or 2 [default: 2]: ").strip().lower()
+    except EOFError:
+        order_choice = ""
+
+    if order_choice in {"", "2", "imposed"}:
         return "imposed"
-    if choice in {"1", "standard"}:
-        return "standard"
-    raise ValueError("Select 1 for standard or 2 for imposed booklet layout.")
+    if order_choice in {"1", "original", "sequence"}:
+        return "half-letter"
+    raise ValueError("Select 1 for original order or 2 for imposed printing.")
 
 
 def generate_booklet(template_path: Path, layout: str = "imposed") -> Path:
-    if layout not in {"standard", "imposed"}:
-        raise ValueError("Layout must be either 'standard' or 'imposed'.")
+    if layout == "standard":
+        layout = "letter"
+    if layout not in {"letter", "half-letter", "imposed"}:
+        raise ValueError(
+            "Layout must be 'letter', 'half-letter', or 'imposed'."
+        )
 
     with template_path.open("r", encoding="utf-8") as file:
         template = json.load(file)
@@ -799,9 +847,12 @@ def generate_booklet(template_path: Path, layout: str = "imposed") -> Path:
     if layout == "imposed":
         page_layout_html = _impose_pages(pages)
         layout_styles = STYLES
+    elif layout == "letter":
+        page_layout_html = "\n".join(pages)
+        layout_styles = STYLES + LETTER_PAGE_STYLES
     else:
         page_layout_html = "\n".join(pages)
-        layout_styles = STYLES + STANDARD_PAGE_STYLES
+        layout_styles = STYLES + HALF_LETTER_PAGE_STYLES
     layout_styles = (
         f"{SHARED_WORD_STYLES}\n{PAGE_STYLES[layout]}\n{layout_styles}"
     )
@@ -832,7 +883,7 @@ def generate_booklet(template_path: Path, layout: str = "imposed") -> Path:
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
-        description="Generate a standard or imposed booklet from a JSON page template."
+        description="Generate a booklet from a JSON page template."
     )
     parser.add_argument(
         "template",
@@ -841,8 +892,8 @@ def main(argv: list[str] | None = None) -> None:
     )
     parser.add_argument(
         "--layout",
-        choices=("standard", "imposed"),
-        help="PDF page layout (skips the interactive layout prompt)",
+        choices=("standard", "letter", "half-letter", "imposed"),
+        help="Page size and order (skips the interactive layout prompts)",
     )
     arguments = parser.parse_args(argv)
     layout = arguments.layout or select_layout()
